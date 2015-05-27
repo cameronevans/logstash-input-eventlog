@@ -97,6 +97,10 @@ class LogStash::Inputs::EventLog < LogStash::Inputs::Base
       e["message"] = event.Message
 
       decorate(e)
+
+      e["message"] = e["message"].split('(\\r|\\n|\\t)+').first
+      e["insertion"] = parse_insertion(e["message"])
+
       queue << e
 
     end # loop
@@ -136,5 +140,37 @@ class LogStash::Inputs::EventLog < LogStash::Inputs::Base
 
     return LogStash::Timestamp.new(DateTime.strptime(result, "%Y%m%dT%H%M%S%z").to_time)
   end
+
+  #parse message field for key => insertion string
+  def parse_insertion(message)
+      delimiter = Regexp.new('(\\r|\\n|\\t)+')
+      child = nil
+      parent = nil
+      previous_child = true
+      insertion = Hash.new
+      parsed = message.split(delimiter)
+      parsed.each do |part|
+        if not part.match(delimiter)
+          if Regexp.new('\:').match(part) and not parent and previous_child
+            parent = part
+            previous_child = false
+          elsif Regexp.new('\:').match(part) and parent and not previous_child
+            child = part
+            previous_child = true
+          elsif Regexp.new('\:').match(part) and parent and previous_child
+            parent = child
+            child = part
+            # previous_child = false
+          elsif not Regexp.new('\:').match(part) and not parent and not child
+            #message, skip
+          elsif not Regexp.new('\:').match(part) and child and previous_child
+            insertion[parent] = insertion[parent].nil? ? { child => part } : insertion[parent].merge(child => part)
+            previous_child = false
+          end
+        end
+      end
+      return insertion
+    end
+
 end # class LogStash::Inputs::EventLog
 
