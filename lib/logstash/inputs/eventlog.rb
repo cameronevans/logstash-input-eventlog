@@ -98,8 +98,8 @@ class LogStash::Inputs::EventLog < LogStash::Inputs::Base
 
       decorate(e)
 
-      e["message"] = e["message"].split('(\\r|\\n|\\t)+').first
       e["insertion"] = parse_insertion(e["message"])
+      e["message"] = e["message"].split('(\\r|\\n|\\t)+').first
 
       queue << e
 
@@ -149,21 +149,19 @@ class LogStash::Inputs::EventLog < LogStash::Inputs::Base
       previous_child = true
       insertion = Hash.new
       parsed = message.split(delimiter)
+
       parsed.each do |part|
         if not part.match(delimiter)
-          if Regexp.new('\:').match(part) and not parent and previous_child
+          if /\:/.match(part) && !parent && previous_child
             parent = part
             previous_child = false
-          elsif Regexp.new('\:').match(part) and parent and not previous_child
+          elsif /\:/.match(part) && parent && !previous_child
             child = part
             previous_child = true
-          elsif Regexp.new('\:').match(part) and parent and previous_child
+          elsif /\:/.match(part) && parent && previous_child
             parent = child
             child = part
-            # previous_child = false
-          elsif not Regexp.new('\:').match(part) and not parent and not child
-            #message, skip
-          elsif not Regexp.new('\:').match(part) and child and previous_child
+          elsif not /\:/.match(part) && child && previous_child
             insertion[parent] = insertion[parent].nil? ? { child => part } : insertion[parent].merge(child => part)
             previous_child = false
           end
