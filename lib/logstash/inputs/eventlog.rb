@@ -94,12 +94,12 @@ class LogStash::Inputs::EventLog < LogStash::Inputs::Base
         e["Data"] = event.Data
       end
 
-      e["message"] = event.Message
+      # e["message"] = event.Message
 
       decorate(e)
 
       e["insertion"] = parse_insertion(e["message"])
-      e["message"] = e["message"].split('(\\r|\\n|\\t)+').first
+      e["message"] = event.Message.split(Regexp.New('(\\r|\\n|\\t)+').first
 
       queue << e
 
